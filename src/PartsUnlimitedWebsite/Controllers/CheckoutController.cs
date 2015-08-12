@@ -15,12 +15,8 @@ namespace PartsUnlimited.Controllers
     [Authorize]
     public class CheckoutController : Controller
     {
-        private readonly IPartsUnlimitedContext _db;
-
-        public CheckoutController(IPartsUnlimitedContext context)
-        {
-            _db = context;
-        }
+        [FromServices]
+        public IPartsUnlimitedContext DbContext { get; set; }
 
         private const string PromoCode = "FREE";
 
@@ -30,7 +26,7 @@ namespace PartsUnlimited.Controllers
         public async Task<IActionResult> AddressAndPayment()
         {
             var id = User.GetUserId();
-            var user = await _db.Users.FirstOrDefaultAsync(o => o.Id == id);
+            var user = await DbContext.Users.FirstOrDefaultAsync(o => o.Id == id);
 
             var order = new Order
             {
@@ -64,14 +60,14 @@ namespace PartsUnlimited.Controllers
                     order.OrderDate = DateTime.Now;
 
                     //Add the Order
-                    _db.Orders.Add(order);
+                    DbContext.Orders.Add(order);
 
                     //Process the order
-                    var cart = ShoppingCart.GetCart(_db, Context);
+                    var cart = ShoppingCart.GetCart(DbContext, Context);
                     cart.CreateOrder(order);
 
                     // Save all changes
-                    await _db.SaveChangesAsync(Context.RequestAborted);
+                    await DbContext.SaveChangesAsync(Context.RequestAborted);
 
                     return RedirectToAction("Complete",
                         new { id = order.OrderId });
@@ -90,7 +86,7 @@ namespace PartsUnlimited.Controllers
         public IActionResult Complete(int id)
         {
             // Validate customer owns this order
-            Order order = _db.Orders.FirstOrDefault(
+            Order order = DbContext.Orders.FirstOrDefault(
                 o => o.OrderId == id &&
                 o.Username == Context.User.GetUserName());
 

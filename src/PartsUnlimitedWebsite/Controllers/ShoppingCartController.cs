@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Microsoft.AspNet.Mvc;
-using Microsoft.Framework.DependencyInjection;
+using Microsoft.AspNet.Antiforgery;
 using PartsUnlimited.Models;
 using PartsUnlimited.Telemetry;
 using PartsUnlimited.ViewModels;
@@ -14,21 +14,21 @@ namespace PartsUnlimited.Controllers
 {
     public class ShoppingCartController : Controller
     {
-        private readonly IPartsUnlimitedContext _db;
-        private readonly ITelemetryProvider _telemetry;
+        [FromServices]
+        public IPartsUnlimitedContext DbContext { get; set; }
 
-        public ShoppingCartController(IPartsUnlimitedContext context, ITelemetryProvider telemetryProvider)
-        {
-            _db = context;
-            _telemetry = telemetryProvider;
-        }
+        [FromServices]
+        public ITelemetryProvider Telemetry { get; set; }
+
+        [FromServices]
+        public IAntiforgery Antiforgery { get; set; }
 
         //
         // GET: /ShoppingCart/
 
         public IActionResult Index()
         {
-            var cart = ShoppingCart.GetCart(_db, Context);
+            var cart = ShoppingCart.GetCart(DbContext, Context);
 
             var items = cart.GetCartItems();
             var itemsCount = items.Sum(x => x.Count);
@@ -55,7 +55,7 @@ namespace PartsUnlimited.Controllers
             };
 
             // Track cart review event with measurements
-            _telemetry.TrackTrace("Cart/Server/Index");
+            Telemetry.TrackTrace("Cart/Server/Index");
 
             // Return the view
             return View(viewModel);
@@ -67,25 +67,25 @@ namespace PartsUnlimited.Controllers
         public async Task<IActionResult> AddToCart(int id)
         {
             // Retrieve the product from the database
-            var addedProduct = _db.Products
+            var addedProduct = DbContext.Products
                 .Single(product => product.ProductId == id);
 
             // Start timer for save process telemetry
             var startTime = System.DateTime.Now;
 
             // Add it to the shopping cart
-            var cart = ShoppingCart.GetCart(_db, Context);
+            var cart = ShoppingCart.GetCart(DbContext, Context);
 
             cart.AddToCart(addedProduct);
 
-            await _db.SaveChangesAsync(Context.RequestAborted);
+            await DbContext.SaveChangesAsync(Context.RequestAborted);
 
             // Trace add process
             var measurements = new Dictionary<string, double>()
             {
                 {"ElapsedMilliseconds", System.DateTime.Now.Subtract(startTime).TotalMilliseconds }
             };
-            _telemetry.TrackEvent("Cart/Server/Add", null, measurements);
+            Telemetry.TrackEvent("Cart/Server/Add", null, measurements);
 
             // Go back to the main store page for more shopping
             return RedirectToAction("Index");
@@ -112,24 +112,23 @@ namespace PartsUnlimited.Controllers
                 }
             }
 
-            var antiForgery = Context.RequestServices.GetService<AntiForgery>();
-            antiForgery.Validate(Context, new AntiForgeryTokenSet(formToken, cookieToken));
+            Antiforgery.ValidateTokens(Context, new AntiforgeryTokenSet(formToken, cookieToken));
 
             // Start timer for save process telemetry
             var startTime = System.DateTime.Now;
 
             // Retrieve the current user's shopping cart
-            var cart = ShoppingCart.GetCart(_db, Context);
+            var cart = ShoppingCart.GetCart(DbContext, Context);
 
             // Get the name of the product to display confirmation
             // TODO [EF] Turn into one query once query of related data is enabled
-            int productId = _db.CartItems.Single(item => item.CartItemId == id).ProductId;
-            string productName = _db.Products.Single(a => a.ProductId == productId).Title;
+            int productId = DbContext.CartItems.Single(item => item.CartItemId == id).ProductId;
+            string productName = DbContext.Products.Single(a => a.ProductId == productId).Title;
 
             // Remove from cart
             int itemCount = cart.RemoveFromCart(id);
 
-            await _db.SaveChangesAsync(Context.RequestAborted);
+            await DbContext.SaveChangesAsync(Context.RequestAborted);
 
             string removed = (itemCount > 0) ? " 1 copy of " : string.Empty;
 
@@ -138,7 +137,7 @@ namespace PartsUnlimited.Controllers
             {
                 {"ElapsedMilliseconds", System.DateTime.Now.Subtract(startTime).TotalMilliseconds }
             };
-            _telemetry.TrackEvent("Cart/Server/Remove", null, measurements);
+            Telemetry.TrackEvent("Cart/Server/Remove", null, measurements);
 
             // Display the confirmation message
             var items = cart.GetCartItems();

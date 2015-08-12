@@ -9,12 +9,8 @@ namespace PartsUnlimited.Controllers
 {
     public class SearchController : Controller
     {
-        private readonly IProductSearch _search;
-
-        public SearchController(IProductSearch search)
-        {
-            _search = search;
-        }
+        [FromServices]
+        public IProductSearch Search { get; set; }
 
         public async Task<IActionResult> Index(string q)
         {
@@ -23,7 +19,7 @@ namespace PartsUnlimited.Controllers
                 return View(null);
             }
 
-            var result = await _search.Search(q);
+            var result = await Search.Search(q);
 
             return View(result);
         }

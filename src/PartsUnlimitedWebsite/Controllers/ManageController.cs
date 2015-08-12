@@ -17,15 +17,11 @@ namespace PartsUnlimited.Controllers
     [Authorize]
     public class ManageController : Controller
     {
-        public ManageController(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager)
-        {
-            UserManager = userManager;
-            SignInManager = signInManager;
-        }
+        [FromServices]
+        public UserManager<ApplicationUser> UserManager { get; set; }
 
-        public UserManager<ApplicationUser> UserManager { get; private set; }
-
-        public SignInManager<ApplicationUser> SignInManager { get; private set; }
+        [FromServices]
+        public SignInManager<ApplicationUser> SignInManager { get; set; }
 
         //
         // GET: /Manage/Index

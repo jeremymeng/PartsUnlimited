@@ -14,28 +14,26 @@ namespace PartsUnlimited.Controllers
 {
     public class RecommendationsController : Controller
     {
-        private readonly IPartsUnlimitedContext _db;
-        private readonly IRecommendationEngine _recommendation;
-        private readonly IWebsiteOptions _option;
+        [FromServices]
+        public IPartsUnlimitedContext DbContext { get; set; }
 
-        public RecommendationsController(IPartsUnlimitedContext context, IRecommendationEngine recommendationEngine, IWebsiteOptions websiteOptions)
-        {
-            _db = context;
-            _recommendation = recommendationEngine;
-            _option = websiteOptions;
-        }
+        [FromServices]
+        public IRecommendationEngine Recommendation { get; set; }
+
+        [FromServices]
+        public IWebsiteOptions Option { get; set; }
 
         public async Task<IActionResult> GetRecommendations(string recommendationId)
         {
-            if (!_option.ShowRecommendations)
+            if (!Option.ShowRecommendations)
             {
                 return new EmptyResult();
             }
 
-            var recommendedProductIds = await _recommendation.GetRecommendationsAsync(recommendationId);
+            var recommendedProductIds = await Recommendation.GetRecommendationsAsync(recommendationId);
 
             var productTasks = recommendedProductIds
-                .Select(item => _db.Products.SingleOrDefaultAsync(c => c.RecommendationId == Convert.ToInt32(item)))
+                .Select(item => DbContext.Products.SingleOrDefaultAsync(c => c.RecommendationId == Convert.ToInt32(item)))
                 .ToList();
 
             await Task.WhenAll(productTasks);

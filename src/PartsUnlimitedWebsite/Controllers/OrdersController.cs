@@ -17,37 +17,34 @@ namespace PartsUnlimited.Controllers
     [Authorize]
     public class OrdersController : Controller
     {
-        private readonly IOrdersQuery _ordersQuery;
-        private readonly ITelemetryProvider _telemetry;
+        [FromServices]
+        public IOrdersQuery OrdersQuery { get; set; }
 
-        public OrdersController(IOrdersQuery ordersQuery, ITelemetryProvider telemetryProvider)
-        {
-            _ordersQuery = ordersQuery;
-            _telemetry = telemetryProvider;
-        }
+        [FromServices]
+        public ITelemetryProvider Telemetry { get; set; }
 
         public async Task<IActionResult> Index(DateTime? start, DateTime? end, string invalidOrderSearch)
         {
             var username = User.GetUserName();
 
-            return View(await _ordersQuery.IndexHelperAsync(username, start, end, 10, invalidOrderSearch, false));
+            return View(await OrdersQuery.IndexHelperAsync(username, start, end, 10, invalidOrderSearch, false));
         }
 
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null)
             {
-                _telemetry.TrackTrace("Order/Server/NullId");
+                Telemetry.TrackTrace("Order/Server/NullId");
                 return RedirectToAction("Index", new { invalidOrderSearch = Request.Query["id"] });
             }
 
-            var order = await _ordersQuery.FindOrderAsync(id.Value);
+            var order = await OrdersQuery.FindOrderAsync(id.Value);
             var username = User.GetUserName();
 
             // If the username isn't the same as the logged in user, return as if the order does not exist
             if (order == null || !String.Equals(order.Username, username, StringComparison.Ordinal))
             {
-                _telemetry.TrackTrace("Order/Server/UsernameMismatch");
+                Telemetry.TrackTrace("Order/Server/UsernameMismatch");
                 return RedirectToAction("Index", new { invalidOrderSearch = id.ToString() });
             }
 
@@ -59,7 +56,7 @@ namespace PartsUnlimited.Controllers
                 };
             if (order.OrderDetails == null)
             {
-                _telemetry.TrackEvent("Order/Server/NullDetails", eventProperties, null);
+                Telemetry.TrackEvent("Order/Server/NullDetails", eventProperties, null);
             }
             else
             {
@@ -67,7 +64,7 @@ namespace PartsUnlimited.Controllers
                 {
                     {"LineItemCount", order.OrderDetails.Count }
                 };
-                _telemetry.TrackEvent("Order/Server/Details", eventProperties, eventMeasurements);
+                Telemetry.TrackEvent("Order/Server/Details", eventProperties, eventMeasurements);
             }
 
             var itemsCount = order.OrderDetails.Sum(x => x.Quantity);

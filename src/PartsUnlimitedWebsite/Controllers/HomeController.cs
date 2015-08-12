@@ -13,14 +13,11 @@ namespace PartsUnlimited.Controllers
 {
     public class HomeController : Controller
     {
-        private readonly IPartsUnlimitedContext _db;
-        private readonly IMemoryCache _cache;
+        [FromServices]
+        public IPartsUnlimitedContext DbContext { get; set; }
 
-        public HomeController(IPartsUnlimitedContext context, IMemoryCache memoryCache)
-        {
-            _db = context;
-            _cache = memoryCache;
-        }
+        [FromServices]
+        public IMemoryCache Cache { get; set; }
 
         //
         // GET: /Home/
@@ -28,19 +25,19 @@ namespace PartsUnlimited.Controllers
         {
             // Get most popular products
             List<Product> topSellingProducts;
-            if (!_cache.TryGetValue("topselling", out topSellingProducts))
+            if (!Cache.TryGetValue("topselling", out topSellingProducts))
             {
                 topSellingProducts = GetTopSellingProducts(4);
                 //Refresh it every 10 minutes. Let this be the last item to be removed by cache if cache GC kicks in.
-                _cache.Set("topselling", topSellingProducts, new MemoryCacheEntryOptions().SetAbsoluteExpiration(TimeSpan.FromMinutes(10)).SetPriority(CacheItemPriority.High));
+                Cache.Set("topselling", topSellingProducts, new MemoryCacheEntryOptions().SetAbsoluteExpiration(TimeSpan.FromMinutes(10)).SetPriority(CacheItemPriority.High));
             }
             
             List<Product> newProducts;
-            if (!_cache.TryGetValue("newarrivals", out newProducts))
+            if (!Cache.TryGetValue("newarrivals", out newProducts))
             {
                 newProducts = GetNewProducts(4);
                 //Refresh it every 10 minutes. Let this be the last item to be removed by cache if cache GC kicks in.
-                _cache.Set("newarrivals", newProducts, new MemoryCacheEntryOptions().SetAbsoluteExpiration(TimeSpan.FromMinutes(10)).SetPriority(CacheItemPriority.High));
+                Cache.Set("newarrivals", newProducts, new MemoryCacheEntryOptions().SetAbsoluteExpiration(TimeSpan.FromMinutes(10)).SetPriority(CacheItemPriority.High));
             }
 
             var viewModel = new HomeViewModel
@@ -66,7 +63,7 @@ namespace PartsUnlimited.Controllers
             // the products with the highest count
 
             // TODO [EF] We don't query related data as yet, so the OrderByDescending isn't doing anything
-            return _db.Products
+            return DbContext.Products
                 .OrderByDescending(a => a.OrderDetails.Count())
                 .Take(count)
                 .ToList();
@@ -74,7 +71,7 @@ namespace PartsUnlimited.Controllers
 
         private List<Product> GetNewProducts(int count)
         {
-            return _db.Products
+            return DbContext.Products
                 .OrderByDescending(a => a.Created)
                 .Take(count)
                 .ToList();

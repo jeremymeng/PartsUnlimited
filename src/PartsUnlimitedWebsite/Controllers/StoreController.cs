@@ -11,21 +11,18 @@ namespace PartsUnlimited.Controllers
 {
     public class StoreController : Controller
     {
-        private readonly IPartsUnlimitedContext _db;
-        private readonly IMemoryCache _cache;
+        [FromServices]
+        public IPartsUnlimitedContext DbContext { get; set; }
 
-        public StoreController(IPartsUnlimitedContext context, IMemoryCache memoryCache)
-        {
-            _db = context;
-            _cache = memoryCache;
-        }
+        [FromServices]
+        public IMemoryCache Cache { get; set; }
 
         //
         // GET: /Store/
 
         public IActionResult Index()
         {
-            var category = _db.Categories.ToList();
+            var category = DbContext.Categories.ToList();
 
             return View(category);
         }
@@ -38,8 +35,8 @@ namespace PartsUnlimited.Controllers
             // Retrieve Category category and its Associated associated Products products from database
 
             // TODO [EF] Swap to native support for loading related data when available
-            var categoryModel = _db.Categories.Single(g => g.CategoryId == categoryId);
-            categoryModel.Products = _db.Products.Where(a => a.CategoryId == categoryModel.CategoryId).ToList();
+            var categoryModel = DbContext.Categories.Single(g => g.CategoryId == categoryId);
+            categoryModel.Products = DbContext.Products.Where(a => a.CategoryId == categoryModel.CategoryId).ToList();
 
             return View(categoryModel);
         }
@@ -48,14 +45,14 @@ namespace PartsUnlimited.Controllers
         {
             Product productData;
 
-            if (!_cache.TryGetValue(string.Format("product_{0}", id), out productData))
+            if (!Cache.TryGetValue(string.Format("product_{0}", id), out productData))
             {
-                productData = _db.Products.Single(a => a.ProductId == id);
-                productData.Category = _db.Categories.Single(g => g.CategoryId == productData.CategoryId);
+                productData = DbContext.Products.Single(a => a.ProductId == id);
+                productData.Category = DbContext.Categories.Single(g => g.CategoryId == productData.CategoryId);
 
                 if (productData != null)
                 {
-                    _cache.Set(string.Format("product_{0}", id), productData, new MemoryCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromMinutes(10)));
+                    Cache.Set(string.Format("product_{0}", id), productData, new MemoryCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromMinutes(10)));
                 }                
             }
 

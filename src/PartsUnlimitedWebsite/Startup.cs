@@ -1,9 +1,10 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System;
 using Microsoft.AspNet.Authorization;
 using Microsoft.AspNet.Builder;
-using Microsoft.AspNet.Diagnostics;
+using Microsoft.AspNet.Diagnostics.Entity;
 using Microsoft.AspNet.Identity;
 using Microsoft.AspNet.Identity.EntityFramework;
 using Microsoft.Data.Entity;
@@ -19,7 +20,6 @@ using PartsUnlimited.Search;
 using PartsUnlimited.Security;
 using PartsUnlimited.Telemetry;
 using PartsUnlimited.WebsiteConfiguration;
-using System;
 
 namespace PartsUnlimited
 {
@@ -49,10 +49,10 @@ namespace PartsUnlimited
             if (useInMemoryDatabase || runningOnMono)
             {
                 services.AddEntityFramework()
-                        .AddInMemoryStore()
+                        .AddInMemoryDatabase()
                         .AddDbContext<PartsUnlimitedContext>(options =>
                         {
-                            options.UseInMemoryStore();
+                            options.UseInMemoryDatabase();
                         });
             }
             else
@@ -145,7 +145,8 @@ namespace PartsUnlimited
         {
             //Display custom error page in production when error occurs
             //During development use the ErrorPage middleware to display error information in the browser
-            app.UseErrorPage(ErrorPageOptions.ShowAll);
+            app.UseErrorPage();
+            app.UseDatabaseErrorPage(DatabaseErrorPageOptions.ShowAll);
 
             // Add the runtime information page that can be used by developers
             // to see what packages are used by the application
