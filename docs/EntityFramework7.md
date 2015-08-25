@@ -33,4 +33,4 @@ Entity Framework will inspect the database specified in the DefaultConnection co
 Applying a migration does not automatically seed the database with data.  The PartsUnlimited website is configured to input sample data into the database only if the tables are empty as is the case when apply the initial migration for PartsUnlimited.Models.
 
 ##Migration Commands
-There are several commands for EntityFramework, including listing available migrations, applying, removing and adding migrations.  Run `dnx . migration` to see a list of available commands.
+There are several commands for EntityFramework, including listing available migrations, applying, removing and adding migrations.  Run `dnx . ef migration` to see a list of available commands.
